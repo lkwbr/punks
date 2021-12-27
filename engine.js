@@ -7,9 +7,15 @@ const IMG_HEIGHT = 15 * 10
 const NUM_FRAMES = 2 
 const RENDER_MS = 500
 const BG_COLORS = ['#BB2528', '#165B33']
-const PARTICLE_CEILING = 25
+const PARTICLE_CEILING = 50
+const PARTICLE_FLOOR = 10
 
-const USERS = ['emilia', 'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee']
+const USERS = [
+    'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee',
+    'emilia',
+    'landon',
+    //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
+]
 const DEFAULT_USER = USERS[Math.floor(Math.random() * USERS.length)]
 
 function start() {
@@ -94,14 +100,21 @@ const Game = {
 				Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
 
 				// Draw the snow
-				const numSnowParticles = Math.floor(PARTICLE_CEILING * Math.random())
+				const numSnowParticles = Math.floor((PARTICLE_CEILING - PARTICLE_FLOOR) * Math.random()) + PARTICLE_FLOOR
 				Game.ctx.fillStyle = '#ffffff'
 				Array.from(Array(numSnowParticles)).forEach((x, i) => {
+						rnd = Math.random()
+						let particleWidth = 10
+						if (rnd < 0.1) {
+							particleWidth = 20
+						} else if (rnd < 0.25) {
+							particleWidth = 5	
+						} 
 						Game.ctx.fillRect(
 								Math.floor(Math.random() * Game.canvas.width), 
 								Math.floor(Math.random() * Game.canvas.height),
-								10,
-								10	
+								particleWidth,
+								particleWidth	
 						)
 				})
 
@@ -111,13 +124,24 @@ const Game = {
 				const centerY = Game.canvas.height / 2
 				const imgWidth = image.width * 20
 				const imgHeight = image.height * 20
+
+				if (Math.random() < 0.1) {
+						// With a random probability, randomly flip the image
+						Game.ctx.translate(centerX + imgWidth / 2, centerY - imgHeight / 2)
+						Game.ctx.scale(-1, 1)
+				} else {
+						Game.ctx.translate(centerX - imgWidth / 2, centerY - imgHeight / 2)
+			  }
 				Game.ctx.drawImage(
 						image,
-						centerX - imgWidth / 2,
-						centerY - imgHeight / 2,
+						0, 0,
+						//centerX - imgWidth / 2,
+						//centerY - imgHeight / 2,
 						imgWidth,
 						imgHeight
 				)
+				// Reset transformations to normal just in case 
+				Game.ctx.setTransform(1, 0, 0, 1, 0, 0)
 
 				// Draw the name
 				/*
