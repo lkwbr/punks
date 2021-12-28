@@ -14,6 +14,7 @@ const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee',
     'emilia',
     'landon',
+		'tree'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
 const DEFAULT_USER = USERS[Math.floor(Math.random() * USERS.length)]
