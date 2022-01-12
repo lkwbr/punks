@@ -6,7 +6,8 @@ const IMG_HEIGHT = 15 * 10
 
 const NUM_FRAMES = 2 
 const RENDER_MS = 500
-const BG_COLORS = ['#BB2528', '#165B33']
+//const BG_COLORS = ['#BB2528', '#165B33']
+const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 

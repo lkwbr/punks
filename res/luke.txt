@@ -1,0 +1,7 @@
+strength, 
+perception, 
+endurance, 
+charisma, 
+intelligence, 
+agility, and 
+luck

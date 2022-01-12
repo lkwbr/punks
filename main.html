@@ -5,6 +5,7 @@ mobile-first
 -->
 <html>
     <head>
+        <link rel="icon" type="image/png" href="favicon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -14,6 +15,9 @@ mobile-first
     </head>
     <body>
         <canvas id="canvas"></canvas>
-        <embed id="embed_player" src="rockin_8bit.mp3" autostart="true" loop="true" hidden="true"></embed>
+        <audio loop autoplay>
+            <source src="/rockin_8bit.mp3" type="audio/mp3">
+            <source src="/rockin_8bit.ogg" type="audio/ogg">
+        </audio>
     </body>
 </html>
