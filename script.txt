@@ -1,0 +1,12 @@
+All in ECS-mode
+
+# Individual NFTs
+Each NFT is displayed with a static black background and you need to tap it to get to the next frame
+Special abilities for each one, as well as weaknesses
+
+# NFT Trailer
+"Good Night" starts playing
+You watch the sun set
+The NFT characters start slowly presenting, timed well with the audio
+They start speeding up, and things start appearing in the environment
+The song ends, and it fades into darkness

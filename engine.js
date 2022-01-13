@@ -4,21 +4,22 @@ const GAME_HEIGHT = 270
 const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
+const USER_REFRESH_PERIOD = 10
+const RENDER_MS = 100
+//const RENDER_MS = 500
 const NUM_FRAMES = 2 
-const RENDER_MS = 500
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 
 const USERS = [
-    'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee',
+    'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
     'emilia',
     'landon',
-		'tree'
+		'tree', 'sun'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
-const DEFAULT_USER = USERS[Math.floor(Math.random() * USERS.length)]
 
 function start() {
     // TODO parameterize
@@ -61,14 +62,11 @@ const Game = {
         Game.canvas = document.getElementById('canvas')
         Game.ctx = Game.canvas.getContext('2d')
 
-				Game.user = DEFAULT_USER
-
 				Game.it = 0
 				Game.mode = 'pause'
 
-        // Load our "game grid" image
-				Game.images = Array.from({ length: NUM_FRAMES }, (_, i) => new Image())
-        Game.images.forEach((x, i) => x.src = `res/${Game.user}_${i + 1}.png`)
+        // Randomly get starting user
+        Game.setUser(Math.floor(Math.random() * USERS.length))
 
         // Request first frame
         Game.images[0].onload = () => {
@@ -80,6 +78,13 @@ const Game = {
 					Game.mode = (Game.mode === "pause") ? "run" : "pause"
 				}, false);
 
+    },
+
+    setUser(userId) {
+        Game.userId = userId
+        const user = USERS[Game.userId]
+				Game.images = Array.from({ length: NUM_FRAMES }, (_, i) => new Image())
+        Game.images.forEach((x, i) => x.src = `res/${user}_${i + 1}.png`)
     },
 
 		pause() {
@@ -97,6 +102,21 @@ const Game = {
 	  },
 
 		draw() {
+
+        const sunsetColors = ['#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
+
+        const sceneLength = 200
+        if (Game.it < sceneLength) {
+
+            const bgColorId = Math.floor((Game.it / sceneLength) * sunsetColors.length)
+            const bgColor = sunsetColors[bgColorId] 
+
+            Game.ctx.fillStyle = bgColor
+            Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
+
+            return
+        }
+
 				// Draw the background
 				Game.ctx.fillStyle = BG_COLORS[Game.it % BG_COLORS.length]
 				Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
@@ -156,6 +176,12 @@ const Game = {
 				var msg = new SpeechSynthesisUtterance()
 				msg.text = Game.motto 
 				window.speechSynthesis.speak(msg)
+
+        // User change
+        if (Game.it % USER_REFRESH_PERIOD == 0) {
+            Game.setUser((Game.userId + 1) % USERS.length)
+        }
+
 		},
 
 		update() {
