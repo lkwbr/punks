@@ -267,8 +267,8 @@ const Game = {
         console.log('xshift', xShift, 'yshift', yShift)
         Game.components.forEach(comp => {
             console.log('before', comp.coor)
-            comp.coor[0] *= xShift
-            comp.coor[1] *= yShift
+            comp.coor[0] = (comp.coor[0] + comp.dims[0] / 2) * xShift - comp.dims[0] / 2
+            comp.coor[1] = (comp.coor[1] + comp.dims[1] / 2) * xShift - comp.dims[1] / 2
             console.log('after', comp.coor)
         })
 
