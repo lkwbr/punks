@@ -5,13 +5,15 @@ const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
 const USER_REFRESH_PERIOD = 10
-const DEFAULT_RENDER_MS = 5000
+const DEFAULT_RENDER_MS = 1000
 const NUM_FRAMES = 2 
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#005dec', '#1105bd', '#570079', '#000454', '#000']
+
+const SUNSET_SCENE_LENGTH = 20
 
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
@@ -39,13 +41,13 @@ const Game = {
         }
         Game.systems = [
             /*
-            Game.snowSystem, 
             Game.nightSystem, 
             Game.pauseSystem,
             Game.drawUserSystem, 
             Game.changeUserSystem,
             Game.canvasSizeSystem,
             */
+            Game.snowSystem, 
             Game.resizeSystem,
             Game.sunsetSystem, 
             Game.drawSystem, 
@@ -79,6 +81,10 @@ const Game = {
         }
 
         return getImages(USERS[Game.userId], NUM_FRAMES)
+    },
+
+    getCanvasDims() {
+        return [Game.canvas.width, Game.canvas.height]
     },
 
     getCenterCoordinates() {
@@ -124,9 +130,16 @@ const Game = {
 
     getComponent(id) {
         let foundComp = null
-        Game.components.forEach(comp => foundComp = (comp.id == id) ? comp : null)
+        Game.components.forEach(comp => foundComp = (comp.id == id) ? comp : foundComp)
+        console.log(Game.components, id)
         if (!foundComp) { throw Exception() }
         return foundComp
+    },
+
+    getComponents(group) {
+        const foundComps = []  
+        Game.components.forEach(comp => { if (comp.group == group) { foundComps.push(comp) } })
+        return foundComps
     },
 
     createComponent() {
@@ -134,20 +147,16 @@ const Game = {
     },
 
     sunsetSystem() {
-        const sceneLength = 20
         if (Game.entities.paused) { return }
-        if (Game.entities.it > sceneLength) { return }
-
+        if (Game.entities.it > SUNSET_SCENE_LENGTH) { return }
         // Background
-        const bgColorId = Math.floor((Game.entities.it / sceneLength) * SUNSET_COLORS.length)
+        const sunDiameter = 700
+        const bgColorId = Math.floor((Game.entities.it / SUNSET_SCENE_LENGTH) * SUNSET_COLORS.length)
         Game.entities.bg = SUNSET_COLORS[bgColorId]
-
         if (Game.entities.it == 0) {
-            // Create the sun component
-            const dims = [300, 300]
-            const coor = Game.getCenterCoordinates()
-            coor[0] -= dims[0] / 2
-            coor[1] -= dims[1] / 2
+            // Spawn the sun at the top
+            const dims = [sunDiameter, sunDiameter]
+            const coor = [Game.getCenterCoordinates()[0], -sunDiameter/2]
             const sunImages = Game.getImages('sun', 2)
             const sunComp = {
                 img: sunImages[0],
@@ -162,18 +171,35 @@ const Game = {
             }
             Game.components.push(sunComp)
         } else {
+            // Perform sunset steps
             const sunComp = Game.getComponent('sun')
-            sunComp.coor[1] += 20
+            Game.updateComponentDims(sunComp, null, null, -40)
+            const sunriseLength = Game.getCanvasDims()[1] + sunDiameter
+            // NOTE:  0.90 because I want the sun to set before all colors are enumerated 
+            const stepLength = sunriseLength / Math.floor(SUNSET_SCENE_LENGTH * 0.90) 
+            sunComp.coor[1] += stepLength
             console.log('sunComp', sunComp)
         }
     },
 
-    snowSystem() {
-        if (game.entities.paused) { return }
+    updateComponentDims(comp, w, h, r) {
+        if (r) {
+            w = comp.dims[0] + r
+            h = comp.dims[1] + r
+        }
+        comp.dims = [w, h]
+    },
 
-				// Draw the snow
-				const numSnowParticles = Math.floor((PARTICLE_CEILING - PARTICLE_FLOOR) * Math.random()) + PARTICLE_FLOOR
-				Game.ctx.fillStyle = '#fff'
+    snowSystem() {
+        const snowStartFrame = Math.floor(SUNSET_SCENE_LENGTH * 0.5)
+        if (Game.entities.paused) { return }
+        if (Game.entities.it < snowStartFrame) { return }
+
+        const groupId = 'snowflakes'
+        let snowflakes = Game.getComponents(groupId)
+
+        // Spawn the snow
+				const numSnowParticles = 1 // Math.floor((PARTICLE_CEILING - PARTICLE_FLOOR) * Math.random()) + PARTICLE_FLOOR
 				Array.from(Array(numSnowParticles)).forEach((x, i) => {
 						let rnd = Math.random()
 						let particleWidth = 10
@@ -182,13 +208,29 @@ const Game = {
 						} else if (rnd < 0.25) {
 							particleWidth = 5
 						}
-						Game.ctx.fillRect(
-								Math.floor(Math.random() * Game.canvas.width),
-								Math.floor(Math.random() * Game.canvas.height),
-								particleWidth,
-								particleWidth
-						)
+						const coor = [
+                Math.floor(Math.random() * Game.canvas.width),
+                0
+            ]
+            const dims = [particleWidth, particleWidth]
+            const snowflake = {
+                type: 'rect',
+                coor,
+                dims,
+                id: `snowflake_${snowflakes.length + i}`,
+                group: groupId,
+                data: {
+                    fill: '#fff'
+                }
+            }
+            Game.components.push(snowflake)
 				})
+
+        // Render the snow
+        Game.getComponents(groupId).forEach(snowflake => {
+            snowflake.coor[0] += -1 ^ Math.floor(Math.random() * 2) * (Math.random() * 10)
+            snowflake.coor[1] += Math.random() * 50 + 100
+        })
     },
 
     nightSystem() {
@@ -235,43 +277,52 @@ const Game = {
     },
 
     drawSystem() {
+
+        // TODO:  Remove items that should be deleted, because they're outside the canvas for too long, for example
+        // TODO:  Probably give each component a lifespan
+
         // Draw background
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
         Game.components.forEach(comp => {
             if (comp.type == 'img') {
+                let img = comp.img
+                if (comp.data.imgs) {
+                    img = comp.data.imgs[comp.data.it % comp.data.imgs.length]
+                    comp.data.it += 1
+                }
                 Game.ctx.drawImage(
-                    comp.img,
-                    comp.coor[0],
-                    comp.coor[1],
+                    img,
+                    comp.coor[0] - comp.dims[0] / 2,
+                    comp.coor[1] - comp.dims[1] / 2,
                     comp.dims[0],
                     comp.dims[1]
                 )
             } else if (comp.type == 'rect') {
-                //
+                Game.ctx.fillStyle = comp.data.fill
+                Game.ctx.fillRect(
+                    comp.coor[0] - comp.dims[0] / 2,
+                    comp.coor[1] - comp.dims[1] / 2,
+                    comp.dims[0],
+                    comp.dims[1]
+                )
             }
         })        
     },
 
-    // TODO
     resizeSystem() {
         if ((window.innerWidth == Game.canvas.width) 
             && (window.innerHeight == Game.canvas.height)) {
             return
         }
-
         // Adjust each entity for the new canvas size.
         const xShift = window.innerWidth / Game.canvas.width 
         const yShift = window.innerHeight / Game.canvas.height 
-        console.log('xshift', xShift, 'yshift', yShift)
         Game.components.forEach(comp => {
-            console.log('before', comp.coor)
-            comp.coor[0] = (comp.coor[0] + comp.dims[0] / 2) * xShift - comp.dims[0] / 2
-            comp.coor[1] = (comp.coor[1] + comp.dims[1] / 2) * xShift - comp.dims[1] / 2
-            console.log('after', comp.coor)
+            comp.coor[0] = comp.coor[0] * xShift
+            comp.coor[1] = comp.coor[1] * yShift
         })
-
         // Update canvas
 				Game.canvas.width = window.innerWidth
 				Game.canvas.height = window.innerHeight
