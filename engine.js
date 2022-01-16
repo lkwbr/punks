@@ -5,7 +5,7 @@ const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
 const USER_REFRESH_PERIOD = 10
-const DEFAULT_RENDER_MS = 1000
+const DEFAULT_RENDER_MS = 100
 const NUM_FRAMES = 2 
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
@@ -41,13 +41,13 @@ const Game = {
         }
         Game.systems = [
             /*
-            Game.nightSystem, 
             Game.pauseSystem,
             Game.changeUserSystem,
             Game.canvasSizeSystem,
             */
             Game.userSystem, 
             Game.snowSystem, 
+            Game.nightSystem,
             Game.resizeSystem,
             Game.sunsetSystem, 
             Game.drawSystem, 
@@ -83,6 +83,7 @@ const Game = {
     getImages(alias, count) {
 				const images = Array.from({ length: count }, (_, i) => new Image())
         images.forEach((x, i) => x.src = `res/${alias}_${i + 1}.png`)
+        console.log('got.images', alias, count, images)
         return images
     },
 
@@ -133,6 +134,10 @@ const Game = {
         // Ensure that the id is unique and the fields are correct for the type
     },
 
+    deleteComponent(id) {
+        Game.components = Game.components.filter(x => x.id == id)
+    },
+
     sunsetSystem() {
         if (Game.entities.paused) { return }
         if (Game.entities.it > SUNSET_SCENE_LENGTH) { return }
@@ -165,7 +170,6 @@ const Game = {
             // NOTE:  0.90 because I want the sun to set before all colors are enumerated 
             const stepLength = sunriseLength / Math.floor(SUNSET_SCENE_LENGTH * 0.90) 
             sunComp.coor[1] += stepLength
-            console.log('sunComp', sunComp)
         }
     },
 
@@ -221,25 +225,22 @@ const Game = {
     },
 
     nightSystem() {
-        if (game.entities.paused) { return }
-
-				// Draw the background
-				Game.ctx.fillStyle = BG_COLORS[Game.entities.it % BG_COLORS.length]
-				Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
+        if (Game.entities.paused) { return }
+        Game.entities.bg = '#000'
     },
 
     userSystem() {
-        const userStartFrame = SUNSET_SCENE_LENGTH + 10 
+        const userStartFrame = SUNSET_SCENE_LENGTH + 10
         if (Game.entities.paused) { return }
         if (Game.entities.it < userStartFrame) { return }
-
 				// Spawn the user
-        let comp = Game.getComponent('user')
+        const username = USERS[Game.entities.userId]
+        let comp = Game.getComponent(username)
         if (!comp) {
-            const coor = Game.getCenterCoordinates()
-            const images = Game.getImages(Game.entities.userId, 2)
+            const images = Game.getImages(username, 2)
             const img = images[0]
-            const dims = [img.width * 20, img.width * 20]
+            const dims = [img.width * 20, img.height * 20]
+            const coor = Game.getCenterCoordinates()
             comp = {
                 img,
                 type: 'img',
@@ -253,10 +254,10 @@ const Game = {
             }
             Game.components.push(comp)
         }
-
         // User change
         if (Game.entities.it % Game.entities.user_refresh_period == 0) {
-            Game.entities.userId = (Game.userId + 1) % USERS.length
+            Game.deleteComponent(username)
+            Game.entities.userId = (Game.entities.userId + 1) % USERS.length
         }
 
         // TODO:  Animate the image like so:
@@ -343,7 +344,7 @@ const Game = {
     },
 
 		pauseSystem() {
-        if (!game.entities.paused) { return }
+        if (!Game.entities.paused) { return }
 
 				// Draw the background
 				Game.ctx.fillStyle = '#ffffff'
