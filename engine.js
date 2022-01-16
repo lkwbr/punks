@@ -43,10 +43,10 @@ const Game = {
             /*
             Game.nightSystem, 
             Game.pauseSystem,
-            Game.drawUserSystem, 
             Game.changeUserSystem,
             Game.canvasSizeSystem,
             */
+            Game.userSystem, 
             Game.snowSystem, 
             Game.resizeSystem,
             Game.sunsetSystem, 
@@ -70,18 +70,7 @@ const Game = {
 				Game.canvas.addEventListener('mousedown', function (e) {
 					Game.entities.paused = !Game.entities.paused
 				}, false)
-    },
-
-    changeUserSystem() {
-        if (game.entities.paused) { return }
-
-        // User change
-        if (Game.entities.it % Game.entities.user_refresh_period == 0) {
-            Game.entities.userId = (Game.userId + 1) % USERS.length
-        }
-
-        return getImages(USERS[Game.userId], NUM_FRAMES)
-    },
+    }, 
 
     getCanvasDims() {
         return [Game.canvas.width, Game.canvas.height]
@@ -131,8 +120,6 @@ const Game = {
     getComponent(id) {
         let foundComp = null
         Game.components.forEach(comp => foundComp = (comp.id == id) ? comp : foundComp)
-        console.log(Game.components, id)
-        if (!foundComp) { throw Exception() }
         return foundComp
     },
 
@@ -241,15 +228,40 @@ const Game = {
 				Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
     },
 
-    userDrawSystem() {
-        if (game.entities.paused) { return }
+    userSystem() {
+        const userStartFrame = SUNSET_SCENE_LENGTH + 10 
+        if (Game.entities.paused) { return }
+        if (Game.entities.it < userStartFrame) { return }
 
-				// Draw the person
-				const image = Game.images[Game.entities.it % NUM_FRAMES]
-        const [centerX, centerY] = Game.getCenterCoordinates()
-				const imgWidth = image.width * 20
-				const imgHeight = image.height * 20
+				// Spawn the user
+        let comp = Game.getComponent('user')
+        if (!comp) {
+            const coor = Game.getCenterCoordinates()
+            const images = Game.getImages(Game.entities.userId, 2)
+            const img = images[0]
+            const dims = [img.width * 20, img.width * 20]
+            comp = {
+                img,
+                type: 'img',
+                coor,
+                dims,
+                id: 'user',
+                data: {
+                    imgs: images,
+                    it: 0
+                }
+            }
+            Game.components.push(comp)
+        }
 
+        // User change
+        if (Game.entities.it % Game.entities.user_refresh_period == 0) {
+            Game.entities.userId = (Game.userId + 1) % USERS.length
+        }
+
+        // TODO:  Animate the image like so:
+
+        /*
 				if (Math.random() < 0.1) {
 						// With a random probability, randomly flip the image
 						Game.ctx.translate(centerX + imgWidth / 2, centerY - imgHeight / 2)
@@ -267,6 +279,7 @@ const Game = {
 				)
 				// Reset transformations to normal just in case 
 				Game.ctx.setTransform(1, 0, 0, 1, 0, 0)
+        */
 
 				// Draw the name
 				/*
