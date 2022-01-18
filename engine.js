@@ -19,7 +19,8 @@ const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
     'emilia',
     'landon',
-		'tree', 'sun'
+		'tree'
+    // 'sun'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
 
@@ -130,12 +131,21 @@ const Game = {
         return foundComps
     },
 
-    createComponent() {
-        // Ensure that the id is unique and the fields are correct for the type
+    createComponent(comp) {
+        // Ensure that the ID is unique and the fields are correct for the type
+        console.log('Creating component:', comp)
+        comp.data.lifetime = 0
+        if (Game.components.some(c => c.id == comp.id)) {
+            throw new Error(`Comoponent ID "${comp.id}" is not unique!`)
+        }
+        Game.components.push(comp)
     },
 
     deleteComponent(id) {
-        Game.components = Game.components.filter(x => x.id == id)
+        console.log('Deleting a component:', id)
+        console.log('Before:', Game.components)
+        Game.components = Game.components.filter(x => x.id !== id)
+        console.log('After:', Game.components)
     },
 
     sunsetSystem() {
@@ -150,7 +160,7 @@ const Game = {
             const dims = [sunDiameter, sunDiameter]
             const coor = [Game.getCenterCoordinates()[0], -sunDiameter/2]
             const sunImages = Game.getImages('sun', 2)
-            const sunComp = {
+            Game.createComponent({
                 img: sunImages[0],
                 type: 'img',
                 coor,
@@ -160,8 +170,7 @@ const Game = {
                     imgs: sunImages,
                     it: 0
                 }
-            }
-            Game.components.push(sunComp)
+            })
         } else {
             // Perform sunset steps
             const sunComp = Game.getComponent('sun')
@@ -204,7 +213,7 @@ const Game = {
                 0
             ]
             const dims = [particleWidth, particleWidth]
-            const snowflake = {
+            Game.createComponent({
                 type: 'rect',
                 coor,
                 dims,
@@ -213,8 +222,7 @@ const Game = {
                 data: {
                     fill: '#fff'
                 }
-            }
-            Game.components.push(snowflake)
+            })
 				})
 
         // Render the snow
@@ -226,7 +234,7 @@ const Game = {
 
     nightSystem() {
         if (Game.entities.paused) { return }
-        Game.entities.bg = '#000'
+        Game.entities.bg = '#000000'
     },
 
     userSystem() {
@@ -241,7 +249,8 @@ const Game = {
             const img = images[0]
             const dims = [img.width * 20, img.height * 20]
             const coor = Game.getCenterCoordinates()
-            comp = {
+            console.log('attempting to create component:', username)
+            Game.createComponent({
                 img,
                 type: 'img',
                 coor,
@@ -251,12 +260,11 @@ const Game = {
                     imgs: images,
                     it: 0
                 }
-            }
-            Game.components.push(comp)
+            })
         }
         // User change
         if (Game.entities.it % Game.entities.user_refresh_period == 0) {
-            Game.deleteComponent(username)
+            Game.deleteComponent('user')
             Game.entities.userId = (Game.entities.userId + 1) % USERS.length
         }
 
@@ -299,7 +307,9 @@ const Game = {
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
+        console.log('wowo', Game.components)
         Game.components.forEach(comp => {
+            comp.data.lifetime += 1 
             if (comp.type == 'img') {
                 let img = comp.img
                 if (comp.data.imgs) {
