@@ -24,6 +24,16 @@ const USERS = [
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
 
+function randomString(n) {
+    n = n || 16
+    let s = [...Array(n)].map(_ => {
+        let c = String.fromCharCode(97 + Math.floor(26 * Math.random()))
+        c = Math.random() > 0.5 ? c.toUpperCase() : c
+        return c 
+    }).join('')
+    return s
+}
+
 const Game = {
     init() {
         // Resource fetching
@@ -46,13 +56,14 @@ const Game = {
             Game.changeUserSystem,
             Game.canvasSizeSystem,
             */
-            Game.userSystem, 
-            //Game.snowSystem, 
+            Game.userSystem,
+            Game.snowSystem,
             Game.nightSystem,
             Game.resizeSystem,
-            Game.sunsetSystem, 
-            Game.drawSystem, 
-            Game.clockSystem 
+            Game.sunsetSystem,
+            Game.drawSystem,
+            Game.cleanupSystem,
+            Game.clockSystem,
         ]  
 
         // Initialize canvas
@@ -134,6 +145,7 @@ const Game = {
 
     createComponent(comp) {
         // Ensure that the ID is unique and the fields are correct for the type
+        comp.killable = (comp.killable === false) ? false : true
         console.log(Date.now(), 'Creating component:', comp)
         comp.data.lifetime = 0
         if (Game.components.some(c => c.id == comp.id)) {
@@ -170,7 +182,8 @@ const Game = {
                 data: {
                     imgs: sunImages,
                     it: 0
-                }
+                },
+                killable: false
             })
         } else {
             // Perform sunset steps
@@ -192,6 +205,7 @@ const Game = {
     },
 
     snowSystem() {
+
         const snowStartFrame = Math.floor(SUNSET_SCENE_LENGTH * 0.5)
         if (Game.entities.paused) { return }
         if (Game.entities.it < snowStartFrame) { return }
@@ -218,7 +232,7 @@ const Game = {
                 type: 'rect',
                 coor,
                 dims,
-                id: `snowflake_${snowflakes.length + i}`,
+                id: `snowflake_${randomString(6)}`,
                 group: groupId,
                 data: {
                     fill: '#fff'
@@ -301,6 +315,23 @@ const Game = {
 				*/
     },
 
+    cleanupSystem() {
+        Game.components.forEach(comp => {
+            console.log(comp.id, comp.killable)
+            if (!comp.killable) {
+                return
+            }
+            if ((comp.coor[0] - comp.dims[0] / 2) < 0 || 
+                (comp.coor[1] - comp.dims[1] / 2) < 0 ||
+                (comp.coor[0] + comp.dims[0] / 2) >= Game.canvas.width ||
+                (comp.coor[1] + comp.dims[1] / 2) >= Game.canvas.height
+            ) {
+                console.log('deleting component...', comp)
+                Game.deleteComponent(comp.id)
+            }
+        })
+    },
+
     drawSystem() {
 
         // TODO:  Remove items that should be deleted, because they're outside the canvas for too long, for example
@@ -310,7 +341,6 @@ const Game = {
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
-        console.log('wowo', Game.components)
         Game.components.forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
