@@ -47,7 +47,7 @@ const Game = {
             Game.canvasSizeSystem,
             */
             Game.userSystem, 
-            Game.snowSystem, 
+            //Game.snowSystem, 
             Game.nightSystem,
             Game.resizeSystem,
             Game.sunsetSystem, 
@@ -120,6 +120,7 @@ const Game = {
     },
 
     getComponent(id) {
+        console.log(Date.now(), 'Getting component:', id)
         let foundComp = null
         Game.components.forEach(comp => foundComp = (comp.id == id) ? comp : foundComp)
         return foundComp
@@ -133,7 +134,7 @@ const Game = {
 
     createComponent(comp) {
         // Ensure that the ID is unique and the fields are correct for the type
-        console.log('Creating component:', comp)
+        console.log(Date.now(), 'Creating component:', comp)
         comp.data.lifetime = 0
         if (Game.components.some(c => c.id == comp.id)) {
             throw new Error(`Comoponent ID "${comp.id}" is not unique!`)
@@ -230,6 +231,8 @@ const Game = {
             snowflake.coor[0] += -1 ^ Math.floor(Math.random() * 2) * (Math.random() * 10)
             snowflake.coor[1] += Math.random() * 50 + 100
         })
+
+        Game.entities.bg = '#000000'
     },
 
     nightSystem() {
@@ -243,13 +246,12 @@ const Game = {
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
         const username = USERS[Game.entities.userId]
-        let comp = Game.getComponent(username)
+        let comp = Game.getComponent('user')
         if (!comp) {
             const images = Game.getImages(username, 2)
             const img = images[0]
             const dims = [img.width * 20, img.height * 20]
             const coor = Game.getCenterCoordinates()
-            console.log('attempting to create component:', username)
             Game.createComponent({
                 img,
                 type: 'img',
@@ -258,7 +260,8 @@ const Game = {
                 id: 'user',
                 data: {
                     imgs: images,
-                    it: 0
+                    it: 0,
+                    username
                 }
             })
         }
@@ -385,7 +388,7 @@ const Game = {
         console.log('Game.entities.it:', Game.entities.it)
         Game.systems.forEach(s => s())
 			  setTimeout(
-            () => window.requestAnimationFrame(() => Game.update()), 
+            () => window.requestAnimationFrame(Game.update), 
             Game.entities.render_period
         )
 		}
