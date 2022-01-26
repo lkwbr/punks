@@ -5,13 +5,13 @@ const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
 const USER_REFRESH_PERIOD = 10
-const DEFAULT_RENDER_MS = 100
+const DEFAULT_RENDER_MS = 700
 const NUM_FRAMES = 2 
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
-const SUNSET_COLORS = ['#36c2ff', '#005dec', '#1105bd', '#570079', '#000454', '#000']
+const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
 const SUNSET_SCENE_LENGTH = 20
 
@@ -63,7 +63,7 @@ const Game = {
             Game.sunsetSystem,
             Game.drawSystem,
             Game.cleanupSystem,
-            Game.clockSystem,
+            Game.timeSystem,
         ]  
 
         // Initialize canvas
@@ -410,8 +410,9 @@ const Game = {
 				window.speechSynthesis.speak(msg)
     },
 
-    clockSystem() {
+    timeSystem() {
 				Game.entities.it += 1
+        Game.entities.render_period = Math.max(Game.entities.render_period - 10, 100)
     },
 
 		update() {
