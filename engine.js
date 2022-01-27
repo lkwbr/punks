@@ -59,8 +59,8 @@ const Game = {
             */
             Game.userSystem,
             Game.snowSystem,
-            Game.nightSystem,
             Game.resizeSystem,
+            Game.nightSystem,
             Game.sunsetSystem,
             Game.drawSystem,
             Game.cleanupSystem,
@@ -168,7 +168,7 @@ const Game = {
         if (Game.entities.it > SUNSET_SCENE_LENGTH) { return }
         // Background
         const sunDiameter = 700
-        const bgColorId = Math.floor((Game.entities.it / SUNSET_SCENE_LENGTH) * SUNSET_COLORS.length)
+        const bgColorId = Math.floor((Game.entities.it / SUNSET_SCENE_LENGTH) * (SUNSET_COLORS.length - 1))
         Game.entities.bg = SUNSET_COLORS[bgColorId]
         if (Game.entities.it == 0) {
             // Spawn the sun at the top
@@ -286,7 +286,7 @@ const Game = {
                 text: username.toUpperCase(),
                 type: 'text',
                 coor,
-                size: 40,
+                size: 60,
                 id: USER_TEXT_TAG
             })
         }
@@ -381,7 +381,7 @@ const Game = {
                     comp.dims[1]
                 )
             } else if (comp.type == 'text') {
-                console.log('comp', comp)
+                Game.ctx.fillStyle = '#fff' 
                 Game.ctx.textAlign = 'center'
                 Game.ctx.font = `${comp.size}px Arcade Classic`
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
