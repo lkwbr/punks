@@ -6,13 +6,13 @@ const IMG_HEIGHT = 15 * 10
 
 const USER_REFRESH_PERIOD = 10
 //const DEFAULT_RENDER_MS = 700
-const DEFAULT_RENDER_MS = 100
+const DEFAULT_RENDER_MS = 500
 const NUM_FRAMES = 2 
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
-const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
+const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454', '#000454']
 
 const SUNSET_SCENE_LENGTH = 20
 
@@ -62,6 +62,7 @@ const Game = {
             Game.resizeSystem,
             Game.nightSystem,
             Game.sunsetSystem,
+            Game.mountainSystem,
             Game.drawSystem,
             Game.cleanupSystem,
             Game.timeSystem,
@@ -94,9 +95,13 @@ const Game = {
     },
 
     getImages(alias, count) {
+        if (!count) {
+            const img = new Image()
+            img.src = `res/${alias}.png`
+            return [img]
+        } 
 				const images = Array.from({ length: count }, (_, i) => new Image())
         images.forEach((x, i) => x.src = `res/${alias}_${i + 1}.png`)
-        console.log('got.images', alias, count, images)
         return images
     },
 
@@ -158,9 +163,7 @@ const Game = {
 
     deleteComponent(id) {
         console.log('Deleting a component:', id)
-        console.log('Before:', Game.components)
         Game.components = Game.components.filter(x => x.id !== id)
-        console.log('After:', Game.components)
     },
 
     sunsetSystem() {
@@ -216,11 +219,11 @@ const Game = {
         let snowflakes = Game.getComponents(groupId)
 
         // Spawn the snow
-				const numSnowParticles = 1 // Math.floor((PARTICLE_CEILING - PARTICLE_FLOOR) * Math.random()) + PARTICLE_FLOOR
+				const numSnowParticles = Math.min(Math.floor(Math.log(Game.entities.it)), 10)
 				Array.from(Array(numSnowParticles)).forEach((x, i) => {
 						let rnd = Math.random()
 						let particleWidth = 10
-						if (rnd < 0.1) {
+						if (rnd < 0.05) {
 							particleWidth = 20
 						} else if (rnd < 0.25) {
 							particleWidth = 5
@@ -245,7 +248,7 @@ const Game = {
         // Render the snow
         Game.getComponents(groupId).forEach(snowflake => {
             snowflake.coor[0] += -1 ^ Math.floor(Math.random() * 2) * (Math.random() * 10)
-            snowflake.coor[1] += Math.random() * 50 + 100
+            snowflake.coor[1] += Math.random() * 50 + Math.random() * 100
         })
 
         Game.entities.bg = '#000000'
@@ -256,8 +259,36 @@ const Game = {
         Game.entities.bg = '#000000'
     },
 
+    mountainSystem() {
+        const mountainStartFrame = Math.floor(SUNSET_SCENE_LENGTH)
+        if (Game.entities.paused) { return }
+        const MTN_TAG = 'mountains'
+        let comp = Game.getComponent(MTN_TAG)
+        if (!comp) {
+            // Mountain genesis 
+            const img = Game.getImages(MTN_TAG)[0]
+            const scale = 15
+            const dims = [img.width * scale, img.height * scale]
+            const coor = Game.getCenterCoordinates()
+            coor[1] = Game.getCanvasDims()[1] + 300 // dims[1] / 2
+            Game.createComponent({
+                img,
+                type: 'img',
+                coor,
+                dims,
+                id: MTN_TAG,
+                killable: false
+            })
+        } else {
+            // Mountain animation
+            comp.coor[1] -= 30
+            const scaleGrowth = 1.03
+            comp.dims = [Math.floor(comp.dims[0] * scaleGrowth), Math.floor(comp.dims[1] * scaleGrowth)]
+        }
+    },
+
     userSystem() {
-        const userStartFrame = SUNSET_SCENE_LENGTH + 10
+        const userStartFrame = SUNSET_SCENE_LENGTH
         if (Game.entities.paused) { return }
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
@@ -282,6 +313,7 @@ const Game = {
                     username
                 }
             })
+            /*
             Game.createComponent({
                 text: username.toUpperCase(),
                 type: 'text',
@@ -289,6 +321,7 @@ const Game = {
                 size: 60,
                 id: USER_TEXT_TAG
             })
+            */
         }
 
         // User change
@@ -331,7 +364,6 @@ const Game = {
 
     cleanupSystem() {
         Game.components.forEach(comp => {
-            console.log(comp.id, comp.killable)
             if (!comp.killable) {
                 return
             }
@@ -342,7 +374,6 @@ const Game = {
                 (comp.coor[0] + x_dim / 2) >= Game.canvas.width ||
                 (comp.coor[1] + y_dim / 2) >= Game.canvas.height
             ) {
-                console.log('deleting component...', comp)
                 Game.deleteComponent(comp.id)
             }
         })
@@ -433,7 +464,8 @@ const Game = {
 
     timeSystem() {
 				Game.entities.it += 1
-        Game.entities.render_period = Math.max(Game.entities.render_period - 10, 100)
+        // Speed up render period
+        Game.entities.render_period = Math.max(Game.entities.render_period - 5, 200)
     },
 
 		update() {
