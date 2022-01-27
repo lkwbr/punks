@@ -50,20 +50,17 @@ const Game = {
             userId: Math.floor(Math.random() * USERS.length),
             paused: false,
             bg: '#fff',
+            fg: null,
             images: Game.prefetchImages()  
         }
         Game.systems = [
-            /*
-            Game.pauseSystem,
-            Game.changeUserSystem,
-            Game.canvasSizeSystem,
-            */
             Game.userSystem,
             Game.snowSystem,
             Game.resizeSystem,
             Game.nightSystem,
             Game.sunsetSystem,
             Game.mountainSystem,
+            Game.pauseSystem,
             Game.drawSystem,
             Game.cleanupSystem,
             Game.timeSystem,
@@ -159,6 +156,10 @@ const Game = {
 
     createComponent(comp) {
         // Ensure that the ID is unique and the fields are correct for the type
+        if (!comp.coor) {
+            // Default coordinates to the center of the canvas
+            comp.coor = Game.getCenterCoordinates()
+        }
         comp.killable = (comp.killable === false) ? false : true
         comp.data = comp.data || {}
         comp.data.lifetime = 0
@@ -324,7 +325,7 @@ const Game = {
                 text: username.toUpperCase(),
                 type: 'text',
                 coor: textCoor,
-                size: 60,
+                size: 40,
                 id: USER_TEXT_TAG
             })
         }
@@ -393,7 +394,6 @@ const Game = {
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
-        console.log('comps.lumps', Game.components)
         Game.components.forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
@@ -424,6 +424,11 @@ const Game = {
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
             }
         })        
+        // Foreground
+        if (Game.entities.fg) {
+            Game.ctx.fillStyle = Game.entities.fg
+            Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
+        }
     },
 
     resizeSystem() {
@@ -444,21 +449,26 @@ const Game = {
 				Game.ctx.imageSmoothingEnabled = false
     },
 
-		pauseSystem() {
-        if (!Game.entities.paused) { return }
-
-				// Draw the background
-				Game.ctx.fillStyle = '#ffffff'
-				Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
-
-				const centerX = Game.canvas.width / 2
-				const centerY = Game.canvas.height / 2
-
-				// Draw the name
-				Game.ctx.fillStyle = 'black'
-				Game.ctx.font = '100px "VT323", monospace'
-				Game.ctx.fillText('PAUSED', centerX - 110, centerY)
-	  },
+    pauseSystem() {
+        const PAUSE_TAG = 'pause'
+        const comp = Game.getComponent(PAUSE_TAG)
+        if (!Game.entities.paused) { 
+            Game.entities.fg = null 
+            if (comp) { 
+                Game.deleteComponent(PAUSE_TAG)
+            }
+        } else {
+            Game.entities.fg = 'rgba(255, 255, 255, 0.5)' 
+            if (!comp) {
+                Game.createComponent({
+                    text: '\u25B6 ',
+                    type: 'text',
+                    size: 60,
+                    id: PAUSE_TAG 
+                })
+            }
+        }
+    },
 
     userSpeakSystem() {
         if (game.entities.paused) { return }
