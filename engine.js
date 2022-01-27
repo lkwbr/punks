@@ -49,7 +49,8 @@ const Game = {
             // Randomly set starting user
             userId: Math.floor(Math.random() * USERS.length),
             paused: false,
-            bg: '#fff'
+            bg: '#fff',
+            images: Game.prefetchImages()  
         }
         Game.systems = [
             /*
@@ -66,7 +67,7 @@ const Game = {
             Game.drawSystem,
             Game.cleanupSystem,
             Game.timeSystem,
-        ]  
+        ]
 
         // Initialize canvas
         Game.canvas = document.getElementById('canvas')
@@ -82,7 +83,7 @@ const Game = {
 
 				// Attach canvas listeners
 				Game.canvas.addEventListener('mousedown', function (e) {
-					Game.entities.paused = !Game.entities.paused
+            Game.entities.paused = !Game.entities.paused
 				}, false)
     }, 
 
@@ -94,12 +95,20 @@ const Game = {
 				return [Game.canvas.width / 2, Game.canvas.height / 2]
     },
 
+    prefetchImages() {
+        const NUM_FRAMES = 2
+        return USERS.reduce((acc, key) => ({[key]: Game.getImages(key, NUM_FRAMES), ...acc}), {})
+    },
+
     getImages(alias, count) {
+        if (Game.entities?.images && Game.entities.images[alias]) { 
+            return Game.entities.images[alias] 
+        }
         if (!count) {
             const img = new Image()
             img.src = `res/${alias}.png`
             return [img]
-        } 
+        }
 				const images = Array.from({ length: count }, (_, i) => new Image())
         images.forEach((x, i) => x.src = `res/${alias}_${i + 1}.png`)
         return images
@@ -137,7 +146,6 @@ const Game = {
     },
 
     getComponent(id) {
-        console.log(Date.now(), 'Getting component:', id)
         let foundComp = null
         Game.components.forEach(comp => foundComp = (comp.id == id) ? comp : foundComp)
         return foundComp
@@ -152,7 +160,6 @@ const Game = {
     createComponent(comp) {
         // Ensure that the ID is unique and the fields are correct for the type
         comp.killable = (comp.killable === false) ? false : true
-        console.log(Date.now(), 'Creating component:', comp)
         comp.data = comp.data || {}
         comp.data.lifetime = 0
         if (Game.components.some(c => c.id == comp.id)) {
@@ -162,7 +169,6 @@ const Game = {
     },
 
     deleteComponent(id) {
-        console.log('Deleting a component:', id)
         Game.components = Game.components.filter(x => x.id !== id)
     },
 
@@ -210,7 +216,6 @@ const Game = {
     },
 
     snowSystem() {
-
         const snowStartFrame = Math.floor(SUNSET_SCENE_LENGTH * 0.5)
         if (Game.entities.paused) { return }
         if (Game.entities.it < snowStartFrame) { return }
@@ -219,14 +224,14 @@ const Game = {
         let snowflakes = Game.getComponents(groupId)
 
         // Spawn the snow
-				const numSnowParticles = Math.min(Math.floor(Math.log(Game.entities.it)), 10)
+				const numSnowParticles = Math.min(Math.floor(Math.log(Game.entities.it)), 5)
 				Array.from(Array(numSnowParticles)).forEach((x, i) => {
 						let rnd = Math.random()
-						let particleWidth = 10
+						let particleWidth = 5
 						if (rnd < 0.05) {
 							particleWidth = 20
 						} else if (rnd < 0.25) {
-							particleWidth = 5
+							particleWidth = 10
 						}
 						const coor = [
                 Math.floor(Math.random() * Game.canvas.width),
@@ -288,7 +293,7 @@ const Game = {
     },
 
     userSystem() {
-        const userStartFrame = SUNSET_SCENE_LENGTH
+        const userStartFrame = SUNSET_SCENE_LENGTH + 10
         if (Game.entities.paused) { return }
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
@@ -297,6 +302,7 @@ const Game = {
         const USER_TAG = 'user'
         let comp = Game.getComponent(USER_TAG)
         if (!comp) {
+            console.log('creating user', username)
             const images = Game.getImages(username, 2)
             const img = images[0]
             const dims = [img.width * 20, img.height * 20]
@@ -313,15 +319,14 @@ const Game = {
                     username
                 }
             })
-            /*
+            const textCoor = [coor[0], coor[1] + dims[1] / 2 + 60]
             Game.createComponent({
                 text: username.toUpperCase(),
                 type: 'text',
-                coor,
+                coor: textCoor,
                 size: 60,
                 id: USER_TEXT_TAG
             })
-            */
         }
 
         // User change
@@ -388,6 +393,7 @@ const Game = {
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
+        console.log('comps.lumps', Game.components)
         Game.components.forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
