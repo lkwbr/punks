@@ -5,7 +5,8 @@ const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
 const USER_REFRESH_PERIOD = 10
-const DEFAULT_RENDER_MS = 700
+//const DEFAULT_RENDER_MS = 700
+const DEFAULT_RENDER_MS = 100
 const NUM_FRAMES = 2 
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
@@ -147,6 +148,7 @@ const Game = {
         // Ensure that the ID is unique and the fields are correct for the type
         comp.killable = (comp.killable === false) ? false : true
         console.log(Date.now(), 'Creating component:', comp)
+        comp.data = comp.data || {}
         comp.data.lifetime = 0
         if (Game.components.some(c => c.id == comp.id)) {
             throw new Error(`Comoponent ID "${comp.id}" is not unique!`)
@@ -260,7 +262,9 @@ const Game = {
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
         const username = USERS[Game.entities.userId]
-        let comp = Game.getComponent('user')
+        const USER_TEXT_TAG = 'user_text'
+        const USER_TAG = 'user'
+        let comp = Game.getComponent(USER_TAG)
         if (!comp) {
             const images = Game.getImages(username, 2)
             const img = images[0]
@@ -271,19 +275,29 @@ const Game = {
                 type: 'img',
                 coor,
                 dims,
-                id: 'user',
+                id: USER_TAG,
                 data: {
                     imgs: images,
                     it: 0,
                     username
                 }
             })
+            Game.createComponent({
+                text: username.toUpperCase(),
+                type: 'text',
+                coor,
+                size: 40,
+                id: USER_TEXT_TAG
+            })
         }
+
         // User change
         if (Game.entities.it % Game.entities.user_refresh_period == 0) {
-            Game.deleteComponent('user')
+            Game.deleteComponent(USER_TAG)
+            Game.deleteComponent(USER_TEXT_TAG)
             Game.entities.userId = (Game.entities.userId + 1) % USERS.length
         }
+
 
         // TODO:  Animate the image like so:
 
@@ -321,10 +335,12 @@ const Game = {
             if (!comp.killable) {
                 return
             }
-            if ((comp.coor[0] - comp.dims[0] / 2) < 0 || 
-                (comp.coor[1] - comp.dims[1] / 2) < 0 ||
-                (comp.coor[0] + comp.dims[0] / 2) >= Game.canvas.width ||
-                (comp.coor[1] + comp.dims[1] / 2) >= Game.canvas.height
+            const x_dim = (comp.dims && comp.dims[0]) || 0
+            const y_dim = (comp.dims && comp.dims[1]) || 0
+            if ((comp.coor[0] - x_dim / 2) < 0 || 
+                (comp.coor[1] - y_dim / 2) < 0 ||
+                (comp.coor[0] + x_dim / 2) >= Game.canvas.width ||
+                (comp.coor[1] + y_dim / 2) >= Game.canvas.height
             ) {
                 console.log('deleting component...', comp)
                 Game.deleteComponent(comp.id)
@@ -364,6 +380,11 @@ const Game = {
                     comp.dims[0],
                     comp.dims[1]
                 )
+            } else if (comp.type == 'text') {
+                console.log('comp', comp)
+                Game.ctx.textAlign = 'center'
+                Game.ctx.font = `${comp.size}px Arcade Classic`
+                Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
             }
         })        
     },

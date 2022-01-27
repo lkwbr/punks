@@ -1,13 +1,21 @@
+@font-face {
+    font-family: 'Arcade Classic';
+    src: URL('res/arcade_classic.ttf') format('truetype');
+}
+
 body {    
 		/* background-color: #165B33; */
-		background-color: #BB2528; 
+		background-color: #000; 
 }
+
 #mug {
 		width: 10em; 
 }
+
 #poem {
 		white-space: nowrap;
 }
+
 #poet {
 		white-space: nowrap;
 }
@@ -16,6 +24,7 @@ document, body {
 		margin: 0px;
 		padding: 0px;
 }
+
 #canvas {
 		width: 100%;
 		height: 100%;
