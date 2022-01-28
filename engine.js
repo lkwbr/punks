@@ -60,6 +60,7 @@ const Game = {
             Game.nightSystem,
             Game.sunsetSystem,
             Game.mountainSystem,
+            Game.creditSystem,
             Game.pauseSystem,
             Game.drawSystem,
             Game.cleanupSystem,
@@ -265,6 +266,26 @@ const Game = {
         Game.entities.bg = '#000000'
     },
 
+    creditSystem() {
+        if (Game.entities.paused) { return }
+        const INTRO_TEXT_TAG = 'intro_text' 
+        let comp = Game.getComponent(INTRO_TEXT_TAG)
+        if (!comp) {
+            Game.createComponent({
+                text: 'WEBER\nPUNKS',
+                type: 'text',
+                size: 120,
+                color: 'rgba(255, 255, 255, 255)', 
+                id: INTRO_TEXT_TAG
+            })
+        } else {
+            //const opacity = 1 / Math.log(Game.entities.it + 1)
+            const opacity = 1
+            comp.color = `rgba(255, 255, 255, ${opacity})`
+            console.log('credit.color', comp.color)
+        }
+    },
+
     mountainSystem() {
         const mountainStartFrame = Math.floor(SUNSET_SCENE_LENGTH)
         if (Game.entities.paused) { return }
@@ -398,7 +419,7 @@ const Game = {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
                 let img = comp.img
-                if (comp.data.imgs) {
+                if (!Game.entities.paused && comp.data.imgs) {
                     img = comp.data.imgs[comp.data.it % comp.data.imgs.length]
                     comp.data.it += 1
                 }
@@ -418,7 +439,7 @@ const Game = {
                     comp.dims[1]
                 )
             } else if (comp.type == 'text') {
-                Game.ctx.fillStyle = '#fff' 
+                Game.ctx.fillStyle = comp.color || '#fff' 
                 Game.ctx.textAlign = 'center'
                 Game.ctx.font = `${comp.size}px Arcade Classic`
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
@@ -479,6 +500,7 @@ const Game = {
     },
 
     timeSystem() {
+        if (Game.entities.paused) { return }
 				Game.entities.it += 1
         // Speed up render period
         Game.entities.render_period = Math.max(Game.entities.render_period - 5, 200)
