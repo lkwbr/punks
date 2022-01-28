@@ -270,6 +270,19 @@ const Game = {
         if (Game.entities.paused) { return }
         const INTRO_TEXT_TAG = 'intro_text' 
         let comp = Game.getComponent(INTRO_TEXT_TAG)
+
+
+        //const angleA = Math.random() * 360
+        //const angleB = Math.random() * 360
+        const stepA = 1.2, stepB = 0.7;  
+
+        function createGradient(angleA, angleB) {
+              var gr = Game.ctx.createLinearGradient(0, 0, 500, 0);               // create gradient
+              gr.addColorStop(0, "hsl(" + (angleA % 360) + ",100%, 50%)");   // start color
+              gr.addColorStop(1, "hsl(" + (angleB % 360) + ",100%, 50%)");   // end color
+              return gr                                            // set as fill style
+        }
+
         if (!comp) {
             Game.createComponent({
                 text: 'WEBER\nPUNKS',
@@ -279,9 +292,14 @@ const Game = {
                 id: INTRO_TEXT_TAG
             })
         } else {
+
+            if (Game.entities.it < 25) { return }
+
             //const opacity = 1 / Math.log(Game.entities.it + 1)
             const opacity = 1
-            comp.color = `rgba(255, 255, 255, ${opacity})`
+            //comp.color = `rgba(255, 255, 255, ${opacity})`
+            const CHANGE_FACTOR = 40 
+            comp.color = createGradient((Game.entities.it * CHANGE_FACTOR) % 360, (Game.entities.it * CHANGE_FACTOR + 270) % 360)
             console.log('credit.color', comp.color)
         }
     },
