@@ -4,7 +4,7 @@ const GAME_HEIGHT = 270
 const IMG_WIDTH = 8 * 10
 const IMG_HEIGHT = 15 * 10
 
-const USER_REFRESH_PERIOD = 10
+const USER_REFRESH_PERIOD = 15
 //const DEFAULT_RENDER_MS = 700
 const DEFAULT_RENDER_MS = 500
 const NUM_FRAMES = 2 
@@ -14,9 +14,8 @@ const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454', '#000454']
 
+const MUSIC_EVENTS = [0, 15, 30, 45] // TODO
 const SUNSET_SCENE_LENGTH = 20
-
-const GOODNIGHT_OPENING = 15
 
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
@@ -176,17 +175,20 @@ const Game = {
     },
 
     deleteComponent(id) {
+        console.log('delete.id', id)
         Game.components = Game.components.filter(x => x.id !== id)
     },
 
     sunsetSystem() {
         if (Game.entities.paused) { return }
-        if (Game.entities.it > SUNSET_SCENE_LENGTH) { return }
+        if (Game.entities.it < MUSIC_EVENTS[1]) { return }
+        if (Game.entities.it > MUSIC_EVENTS[2]) { return }
         // Background
         const sunDiameter = 700
-        const bgColorId = Math.floor((Game.entities.it / SUNSET_SCENE_LENGTH) * (SUNSET_COLORS.length - 1))
+        const bgColorId = Math.floor(((Game.entities.it - MUSIC_EVENTS[1]) / SUNSET_SCENE_LENGTH) * (SUNSET_COLORS.length - 1))
         Game.entities.bg = SUNSET_COLORS[bgColorId]
-        if (Game.entities.it == 0) {
+        const sunComp = Game.getComponent('sun')
+        if (!sunComp) {
             // Spawn the sun at the top
             const dims = [sunDiameter, sunDiameter]
             const coor = [Game.getCenterCoordinates()[0], -sunDiameter/2]
@@ -205,7 +207,6 @@ const Game = {
             })
         } else {
             // Perform sunset steps
-            const sunComp = Game.getComponent('sun')
             Game.updateComponentDims(sunComp, null, null, -40)
             const sunriseLength = Game.getCanvasDims()[1] + sunDiameter
             // NOTE:  0.90 because I want the sun to set before all colors are enumerated 
@@ -223,8 +224,9 @@ const Game = {
     },
 
     snowSystem() {
-        const snowStartFrame = Math.floor(SUNSET_SCENE_LENGTH * 0.5)
+        const snowStartFrame = Math.floor(MUSIC_EVENTS[2] * 0.5)
         if (Game.entities.paused) { return }
+        if (Game.entities.it < MUSIC_EVENTS[1]) { return }
         if (Game.entities.it < snowStartFrame) { return }
 
         const groupId = 'snowflakes'
@@ -268,15 +270,15 @@ const Game = {
 
     nightSystem() {
         if (Game.entities.paused) { return }
+        if (Game.entities.it < MUSIC_EVENTS[1]) { return }
         Game.entities.bg = '#000000'
     },
 
     creditSystem() {
-        const CREDIT_END_FRAME = SUNSET_SCENE_LENGTH + 30
+        const CREDIT_END_FRAME = MUSIC_EVENTS[3] - 2 // SUNSET_SCENE_LENGTH + 30
         if (Game.entities.paused) { return }
         const INTRO_TEXT_TAG = 'intro_text' 
         let comp = Game.getComponent(INTRO_TEXT_TAG)
-
 
         //const angleA = Math.random() * 360
         //const angleB = Math.random() * 360
@@ -299,7 +301,7 @@ const Game = {
             })
         } else {
 
-            if (Game.entities.it < 25) { return }
+            if (Game.entities.it < MUSIC_EVENTS[2]) { return }
 
             //const opacity = 1 / Math.log(Game.entities.it + 1)
             const opacity = 1
@@ -315,8 +317,9 @@ const Game = {
     },
 
     mountainSystem() {
-        const mountainStartFrame = Math.floor(SUNSET_SCENE_LENGTH)
+        const mountainStartFrame = MUSIC_EVENTS[2]
         if (Game.entities.paused) { return }
+        if (Game.entities.it < MUSIC_EVENTS[1]) { return }
         const MTN_TAG = 'mountains'
         let comp = Game.getComponent(MTN_TAG)
         if (!comp) {
@@ -343,7 +346,7 @@ const Game = {
     },
 
     userSystem() {
-        const userStartFrame = SUNSET_SCENE_LENGTH + 30
+        const userStartFrame = MUSIC_EVENTS[3] // SUNSET_SCENE_LENGTH + 30
         if (Game.entities.paused) { return }
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
@@ -443,6 +446,7 @@ const Game = {
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
+        console.log('...', Game.components)
         Game.components.forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
@@ -482,13 +486,14 @@ const Game = {
 						}
         })        
 
+			// TODO
       // only draw image where mask is
       Game.ctx.globalCompositeOperation = "destination-in";
 
       // draw our circle mask
       Game.ctx.fillStyle = "#000";
       Game.ctx.beginPath();
-			const size = Game.entities.it < GOODNIGHT_OPENING ? 0 : 100 * (Game.entities.it - GOODNIGHT_OPENING) 
+			const size = Game.entities.it < MUSIC_EVENTS[1] ? 0 : 80 * (Game.entities.it - MUSIC_EVENTS[1]) 
 			const coor = Game.getCenterCoordinates()
       Game.ctx.arc(
         coor[0], // x
@@ -496,11 +501,11 @@ const Game = {
         size * 0.5, // radius
         0, // start angle
         2 * Math.PI // end angle
-      );
-      Game.ctx.fill();
+      )
+      Game.ctx.fill()
 
       // restore to default composite operation (is draw over current image)
-      Game.ctx.globalCompositeOperation = "source-over";
+      Game.ctx.globalCompositeOperation = "source-over"
 
         // Foreground
         if (Game.entities.fg) {
