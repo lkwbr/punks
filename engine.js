@@ -16,6 +16,8 @@ const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#
 
 const SUNSET_SCENE_LENGTH = 20
 
+const GOODNIGHT_OPENING = 15
+
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
     'emilia',
@@ -48,7 +50,7 @@ const Game = {
             user_refresh_period: USER_REFRESH_PERIOD,
             // Randomly set starting user
             userId: Math.floor(Math.random() * USERS.length),
-            paused: false,
+            paused: true,
             bg: '#fff',
             fg: null,
             images: Game.prefetchImages()  
@@ -161,6 +163,9 @@ const Game = {
             // Default coordinates to the center of the canvas
             comp.coor = Game.getCenterCoordinates()
         }
+				if (comp.type == 'audio') {
+						comp.playing = comp.playing || true
+				}
         comp.killable = (comp.killable === false) ? false : true
         comp.data = comp.data || {}
         comp.data.lifetime = 0
@@ -267,6 +272,7 @@ const Game = {
     },
 
     creditSystem() {
+        const CREDIT_END_FRAME = SUNSET_SCENE_LENGTH + 30
         if (Game.entities.paused) { return }
         const INTRO_TEXT_TAG = 'intro_text' 
         let comp = Game.getComponent(INTRO_TEXT_TAG)
@@ -302,6 +308,10 @@ const Game = {
             comp.color = createGradient((Game.entities.it * CHANGE_FACTOR) % 360, (Game.entities.it * CHANGE_FACTOR + 270) % 360)
             console.log('credit.color', comp.color)
         }
+
+        if (Game.entities.it >= CREDIT_END_FRAME) {
+            Game.deleteComponent(INTRO_TEXT_TAG)
+        }
     },
 
     mountainSystem() {
@@ -333,7 +343,7 @@ const Game = {
     },
 
     userSystem() {
-        const userStartFrame = SUNSET_SCENE_LENGTH + 10
+        const userStartFrame = SUNSET_SCENE_LENGTH + 30
         if (Game.entities.paused) { return }
         if (Game.entities.it < userStartFrame) { return }
 				// Spawn the user
@@ -461,8 +471,37 @@ const Game = {
                 Game.ctx.textAlign = 'center'
                 Game.ctx.font = `${comp.size}px Arcade Classic`
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
-            }
+            } else if (comp.type == 'audio') {
+								if (comp.playing) {
+										if (comp.audio.paused) { 
+												comp.audio.play()
+										}
+								} else {
+										comp.audio.pause()
+								}
+						}
         })        
+
+      // only draw image where mask is
+      Game.ctx.globalCompositeOperation = "destination-in";
+
+      // draw our circle mask
+      Game.ctx.fillStyle = "#000";
+      Game.ctx.beginPath();
+			const size = Game.entities.it < GOODNIGHT_OPENING ? 0 : 100 * (Game.entities.it - GOODNIGHT_OPENING) 
+			const coor = Game.getCenterCoordinates()
+      Game.ctx.arc(
+        coor[0], // x
+        coor[1], // y
+        size * 0.5, // radius
+        0, // start angle
+        2 * Math.PI // end angle
+      );
+      Game.ctx.fill();
+
+      // restore to default composite operation (is draw over current image)
+      Game.ctx.globalCompositeOperation = "source-over";
+
         // Foreground
         if (Game.entities.fg) {
             Game.ctx.fillStyle = Game.entities.fg
@@ -490,15 +529,32 @@ const Game = {
 
     pauseSystem() {
         const PAUSE_TAG = 'pause'
+				const MUSIC_TAG = 'goodnight'
         const comp = Game.getComponent(PAUSE_TAG)
+				const musicComp = Game.getComponent(MUSIC_TAG)
         if (!Game.entities.paused) { 
             Game.entities.fg = null 
             if (comp) { 
+								// Newly unpaused
                 Game.deleteComponent(PAUSE_TAG)
+								if (!musicComp) {
+										const musicComp = Game.createComponent({
+												audio: new Audio('goodnight.mp3'),
+												type: 'audio',
+												id: MUSIC_TAG 
+										})
+								} else {
+										musicComp.playing = true
+								}
+								
             }
         } else {
             Game.entities.fg = 'rgba(255, 255, 255, 0.5)' 
             if (!comp) {
+								// Newly paused
+								if (musicComp) { 
+										musicComp.playing = false
+								}
                 Game.createComponent({
                     text: '\u25B6 ',
                     type: 'text',
@@ -521,7 +577,7 @@ const Game = {
         if (Game.entities.paused) { return }
 				Game.entities.it += 1
         // Speed up render period
-        Game.entities.render_period = Math.max(Game.entities.render_period - 5, 200)
+        //Game.entities.render_period = Math.max(Game.entities.render_period - 5, 200)
     },
 
 		update() {
