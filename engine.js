@@ -25,6 +25,7 @@ const USERS = [
     // 'sun'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
+const ASSETS = USERS.concat(['mountains'])
 
 function randomString(n) {
     n = n || 16
@@ -34,6 +35,17 @@ function randomString(n) {
         return c 
     }).join('')
     return s
+}
+
+function fileExists(url) {
+    var http = new XMLHttpRequest();
+    try {
+        http.open('HEAD', url, false);
+        http.send()
+    } catch {
+        return false
+    }
+    return http.status != 404
 }
 
 const Game = {
@@ -96,20 +108,35 @@ const Game = {
 
     prefetchImages() {
         const NUM_FRAMES = 2
-        return USERS.reduce((acc, key) => ({[key]: Game.getImages(key, NUM_FRAMES), ...acc}), {})
+        console.log('assets', typeof(ASSETS))
+        return ASSETS.reduce((acc, key) => ({[key]: Game.getImages(key, NUM_FRAMES), ...acc}), {})
     },
 
     getImages(alias, count) {
+        // Attempt lookup of prefetched images
         if (Game.entities?.images && Game.entities.images[alias]) { 
             return Game.entities.images[alias] 
         }
-        if (!count) {
+        if (fileExists(`res/${alias}.png`)) {
+            // Just one instance of the alias exists
             const img = new Image()
             img.src = `res/${alias}.png`
             return [img]
         }
-				const images = Array.from({ length: count }, (_, i) => new Image())
-        images.forEach((x, i) => x.src = `res/${alias}_${i + 1}.png`)
+        // More than one instance may exist
+        const images = []
+        let i = 0
+        while (true) {
+            const url = `res/${alias}_${i + 1}.png`
+            if (fileExists(url)) {
+                const img = new Image()
+                img.src = url 
+                images.push(img)
+            } else {
+                break
+            }
+            i++
+        }    
         return images
     },
 
@@ -163,8 +190,13 @@ const Game = {
             comp.coor = Game.getCenterCoordinates()
         }
 				if (comp.type == 'audio') {
+            // Default audio to playing
 						comp.playing = comp.playing || true
 				}
+        if (comp.coor.length == 2) {
+            // Enforce component z-axis 
+            comp.coor = comp.coor.concat([0])
+        }
         comp.killable = (comp.killable === false) ? false : true
         comp.data = comp.data || {}
         comp.data.lifetime = 0
@@ -296,6 +328,7 @@ const Game = {
                 text: 'WEBER\nPUNKS',
                 type: 'text',
                 size: 120,
+                coor: Game.getCenterCoordinates().concat([1]),
                 color: 'rgba(255, 255, 255, 255)', 
                 id: INTRO_TEXT_TAG
             })
@@ -317,7 +350,6 @@ const Game = {
     },
 
     mountainSystem() {
-        const mountainStartFrame = MUSIC_EVENTS[2]
         if (Game.entities.paused) { return }
         if (Game.entities.it < MUSIC_EVENTS[1]) { return }
         const MTN_TAG = 'mountains'
@@ -339,6 +371,7 @@ const Game = {
             })
         } else {
             // Mountain animation
+            console.log('mountain--', comp.coor, Game.getCenterCoordinates())
             comp.coor[1] -= 30
             const scaleGrowth = 1.03
             comp.dims = [Math.floor(comp.dims[0] * scaleGrowth), Math.floor(comp.dims[1] * scaleGrowth)]
@@ -447,6 +480,7 @@ const Game = {
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         // Draw components
         console.log('...', Game.components)
+        Game.components.sort((a, b) => a.coor[2] - b.coor[2]) // sort ascending by z-index
         Game.components.forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
