@@ -12,10 +12,11 @@ const NUM_FRAMES = 2
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
-const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454', '#000454']
+const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const MUSIC_EVENTS = [0, 15, 30, 45] // TODO
-const SUNSET_SCENE_LENGTH = 20
+const SPEED = 16
+
+const MUSIC_EVENTS = [0, 15, 30, 44, 257] // TODO
 
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
@@ -48,6 +49,13 @@ function fileExists(url) {
     return http.status != 404
 }
 
+function createGradient(ctx, angleA, angleB) {
+    var gr = ctx.createLinearGradient(0, 0, 500, 0);          // create gradient
+    gr.addColorStop(0, "hsl(" + (angleA % 360) + ",100%, 50%)");   // start color
+    gr.addColorStop(1, "hsl(" + (angleB % 360) + ",100%, 50%)");   // end color
+    return gr                                                      // set as fill style
+}
+
 const Game = {
     init() {
         // Resource fetching
@@ -64,7 +72,8 @@ const Game = {
             paused: true,
             bg: '#fff',
             fg: null,
-            images: Game.prefetchImages()  
+            images: Game.prefetchImages(),
+            speed: SPEED
         }
         Game.systems = [
             Game.userSystem,
@@ -192,6 +201,8 @@ const Game = {
 				if (comp.type == 'audio') {
             // Default audio to playing
 						comp.playing = comp.playing || true
+            comp.audio.playbackRate = Game.entities.speed
+            comp.audio.loop = false
 				}
         if (comp.coor.length == 2) {
             // Enforce component z-axis 
@@ -212,9 +223,12 @@ const Game = {
     },
 
     sunsetSystem() {
+        const SUNSET_START_FRAME = MUSIC_EVENTS[1]
+        const SUNSET_END_FRAME = MUSIC_EVENTS[2] + 5
+        const SUNSET_SCENE_LENGTH = SUNSET_END_FRAME - SUNSET_START_FRAME
         if (Game.entities.paused) { return }
-        if (Game.entities.it < MUSIC_EVENTS[1]) { return }
-        if (Game.entities.it > MUSIC_EVENTS[2]) { return }
+        if (Game.entities.it < SUNSET_START_FRAME) { return }
+        if (Game.entities.it > SUNSET_END_FRAME) { return }
         // Background
         const sunDiameter = 700
         const bgColorId = Math.floor(((Game.entities.it - MUSIC_EVENTS[1]) / SUNSET_SCENE_LENGTH) * (SUNSET_COLORS.length - 1))
@@ -307,21 +321,10 @@ const Game = {
     },
 
     creditSystem() {
-        const CREDIT_END_FRAME = MUSIC_EVENTS[3] - 2 // SUNSET_SCENE_LENGTH + 30
+        const CREDIT_END_FRAME = MUSIC_EVENTS[3] - 2
         if (Game.entities.paused) { return }
         const INTRO_TEXT_TAG = 'intro_text' 
         let comp = Game.getComponent(INTRO_TEXT_TAG)
-
-        //const angleA = Math.random() * 360
-        //const angleB = Math.random() * 360
-        const stepA = 1.2, stepB = 0.7;  
-
-        function createGradient(angleA, angleB) {
-              var gr = Game.ctx.createLinearGradient(0, 0, 500, 0);               // create gradient
-              gr.addColorStop(0, "hsl(" + (angleA % 360) + ",100%, 50%)");   // start color
-              gr.addColorStop(1, "hsl(" + (angleB % 360) + ",100%, 50%)");   // end color
-              return gr                                            // set as fill style
-        }
 
         if (!comp) {
             Game.createComponent({
@@ -334,17 +337,17 @@ const Game = {
             })
         } else {
 
-            if (Game.entities.it < MUSIC_EVENTS[2]) { return }
-
-            //const opacity = 1 / Math.log(Game.entities.it + 1)
+            if (Game.entities.it < MUSIC_EVENTS[2] + 5) { return }
             const opacity = 1
-            //comp.color = `rgba(255, 255, 255, ${opacity})`
             const CHANGE_FACTOR = 40 
-            comp.color = createGradient((Game.entities.it * CHANGE_FACTOR) % 360, (Game.entities.it * CHANGE_FACTOR + 270) % 360)
-            console.log('credit.color', comp.color)
+            comp.color = createGradient(
+                Game.ctx,
+                (Game.entities.it * CHANGE_FACTOR) % 360, 
+                (Game.entities.it * CHANGE_FACTOR + 270) % 360
+            )
         }
-
         if (Game.entities.it >= CREDIT_END_FRAME) {
+            // Delete credits
             Game.deleteComponent(INTRO_TEXT_TAG)
         }
     },
@@ -520,26 +523,36 @@ const Game = {
 						}
         })        
 
-			// TODO
-      // only draw image where mask is
-      Game.ctx.globalCompositeOperation = "destination-in";
-
-      // draw our circle mask
-      Game.ctx.fillStyle = "#000";
-      Game.ctx.beginPath();
-			const size = Game.entities.it < MUSIC_EVENTS[1] ? 0 : 80 * (Game.entities.it - MUSIC_EVENTS[1]) 
-			const coor = Game.getCenterCoordinates()
-      Game.ctx.arc(
-        coor[0], // x
-        coor[1], // y
-        size * 0.5, // radius
-        0, // start angle
-        2 * Math.PI // end angle
-      )
-      Game.ctx.fill()
-
-      // restore to default composite operation (is draw over current image)
-      Game.ctx.globalCompositeOperation = "source-over"
+        // TODO:  Make this masking system part of ECS.
+        // Draw the opening/ending circle 
+        // only draw image where mask is
+        const coor = Game.getCenterCoordinates()
+        const canvasDims = Game.getCanvasDims()
+        const maxSize = 2 * Math.sqrt(2) * canvasDims[0]/2
+        Game.ctx.globalCompositeOperation = "destination-in"
+        Game.ctx.fillStyle = "#000"
+        Game.ctx.beginPath()
+        let size  
+        if (Game.entities.it < MUSIC_EVENTS[1]) {
+            size = 0
+        } else if (Game.entities.it < MUSIC_EVENTS[3]) {
+            size = 80 * (Game.entities.it - MUSIC_EVENTS[1]) 
+        } else if (Game.entities.it > MUSIC_EVENTS.at(-1) - 50) {
+            size = Math.max(0, (maxSize - Game.entities.it + MUSIC_EVENTS.at(-1)))
+            console.log('okay', maxSize, MUSIC_EVENTS.at(-1), Game.entities.it, size, Game.getCanvasDims())
+        } else {
+            size = maxSize 
+        }
+        Game.ctx.arc(
+            coor[0], // x
+            coor[1], // y
+            size * 0.5, // radius
+            0, // start angle
+            2 * Math.PI // end angle
+        )
+        Game.ctx.fill()
+        // restore to default composite operation (is draw over current image)
+        Game.ctx.globalCompositeOperation = "source-over"
 
         // Foreground
         if (Game.entities.fg) {
@@ -624,7 +637,7 @@ const Game = {
         Game.systems.forEach(s => s())
 			  setTimeout(
             () => window.requestAnimationFrame(Game.update), 
-            Game.entities.render_period
+            Game.entities.render_period / Game.entities.speed
         )
 		}
 }
