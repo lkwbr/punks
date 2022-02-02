@@ -14,7 +14,7 @@ const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const SPEED = 16
+const SPEED = 1
 
 const MUSIC_EVENTS = [0, 15, 30, 44, 257] // TODO
 
@@ -530,16 +530,18 @@ const Game = {
         const canvasDims = Game.getCanvasDims()
         const maxSize = 2 * Math.sqrt(2) * canvasDims[0]/2
         Game.ctx.globalCompositeOperation = "destination-in"
-        Game.ctx.fillStyle = "#000"
+        //Game.ctx.fillStyle = "#000"
+        Game.ctx.fillStyle = "#fff"
         Game.ctx.beginPath()
-        let size  
+        let size
+        const numRadiusSteps = 50 
+        const radiusStepSize = maxSize / numRadiusSteps 
         if (Game.entities.it < MUSIC_EVENTS[1]) {
             size = 0
         } else if (Game.entities.it < MUSIC_EVENTS[3]) {
-            size = 80 * (Game.entities.it - MUSIC_EVENTS[1]) 
-        } else if (Game.entities.it > MUSIC_EVENTS.at(-1) - 50) {
-            size = Math.max(0, (maxSize - Game.entities.it + MUSIC_EVENTS.at(-1)))
-            console.log('okay', maxSize, MUSIC_EVENTS.at(-1), Game.entities.it, size, Game.getCanvasDims())
+            size = (Game.entities.it - MUSIC_EVENTS[1]) * radiusStepSize
+        } else if (Game.entities.it > MUSIC_EVENTS.at(-1) - numRadiusSteps) {
+            size = Math.max(0, maxSize - radiusStepSize * (Game.entities.it - MUSIC_EVENTS.at(-1)))
         } else {
             size = maxSize 
         }
