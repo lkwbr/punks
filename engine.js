@@ -14,16 +14,16 @@ const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const SPEED = 1
+const SPEED = 8
 
-const MUSIC_EVENTS = [0, 15, 30, 44, 257] // TODO
+const MUSIC_EVENTS = [0, 15, 30, 44, 350] // TODO
 
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
-    'emilia',
-    'landon',
-		'tree'
-    // 'sun'
+    //'emilia',
+    //'landon',
+		//'tree'
+    //'sun'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
 const ASSETS = USERS.concat(['mountains'])
@@ -203,6 +203,10 @@ const Game = {
 						comp.playing = comp.playing || true
             comp.audio.playbackRate = Game.entities.speed
             comp.audio.loop = false
+            comp.audio.addEventListener('ended', function() {
+                this.currentTime = 0
+                this.stop()
+            }, false)
 				}
         if (comp.coor.length == 2) {
             // Enforce component z-axis 
@@ -534,7 +538,7 @@ const Game = {
         Game.ctx.fillStyle = "#fff"
         Game.ctx.beginPath()
         let size
-        const numRadiusSteps = 50 
+        const numRadiusSteps = 25
         const radiusStepSize = maxSize / numRadiusSteps 
         if (Game.entities.it < MUSIC_EVENTS[1]) {
             size = 0
