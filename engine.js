@@ -14,7 +14,7 @@ const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const SPEED = 8
+const SPEED = 1
 
 const MUSIC_EVENTS = [0, 15, 30, 44, 350] // TODO
 
@@ -83,6 +83,7 @@ const Game = {
             Game.sunsetSystem,
             Game.mountainSystem,
             Game.creditSystem,
+            Game.maskSystem,
             Game.pauseSystem,
             Game.drawSystem,
             Game.cleanupSystem,
@@ -477,18 +478,48 @@ const Game = {
         })
     },
 
+    maskSystem() {
+        const MASK_TAG = 'fg-mask'
+        const canvasDims = Game.getCanvasDims()
+        const maxSize = 2 * Math.sqrt(2) * canvasDims[0]/2
+        let size
+        const numRadiusSteps = 25
+        const radiusStepSize = maxSize / numRadiusSteps 
+        if (Game.entities.it < MUSIC_EVENTS[1]) {
+            size = 0
+        } else if (Game.entities.it < MUSIC_EVENTS[3]) {
+            size = (Game.entities.it - MUSIC_EVENTS[1]) * radiusStepSize
+        } else if (Game.entities.it > MUSIC_EVENTS.at(-1) - numRadiusSteps) {
+            size = Math.max(0, maxSize - radiusStepSize * (Game.entities.it - MUSIC_EVENTS.at(-1)))
+        } else {
+            size = maxSize 
+        }
+        let comp = Game.getComponent(MASK_TAG)
+        if (!comp) {
+            const coor = Game.getCenterCoordinates()
+            Game.createComponent({
+                type: 'mask',
+                coor,
+                size,
+                id: MASK_TAG
+            })
+        } else {
+            comp.size = size 
+        }
+    },
+
     drawSystem() {
 
         // TODO:  Remove items that should be deleted, because they're outside the canvas for too long, for example
-        // TODO:  Probably give each component a lifespan
+        // TODO:  Probably give each component a lifespan  
 
         // Draw background
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
-        // Draw components
         console.log('...', Game.components)
         Game.components.sort((a, b) => a.coor[2] - b.coor[2]) // sort ascending by z-index
-        Game.components.forEach(comp => {
+        // Draw components
+        Game.components.filter(x => x.type != 'mask').forEach(comp => {
             comp.data.lifetime += 1 
             if (comp.type == 'img') {
                 let img = comp.img
@@ -524,41 +555,27 @@ const Game = {
 								} else {
 										comp.audio.pause()
 								}
-						}
+						} else {
+                throw new Exception()
+            }
         })        
 
-        // TODO:  Make this masking system part of ECS.
-        // Draw the opening/ending circle 
-        // only draw image where mask is
-        const coor = Game.getCenterCoordinates()
-        const canvasDims = Game.getCanvasDims()
-        const maxSize = 2 * Math.sqrt(2) * canvasDims[0]/2
-        Game.ctx.globalCompositeOperation = "destination-in"
-        //Game.ctx.fillStyle = "#000"
-        Game.ctx.fillStyle = "#fff"
-        Game.ctx.beginPath()
-        let size
-        const numRadiusSteps = 25
-        const radiusStepSize = maxSize / numRadiusSteps 
-        if (Game.entities.it < MUSIC_EVENTS[1]) {
-            size = 0
-        } else if (Game.entities.it < MUSIC_EVENTS[3]) {
-            size = (Game.entities.it - MUSIC_EVENTS[1]) * radiusStepSize
-        } else if (Game.entities.it > MUSIC_EVENTS.at(-1) - numRadiusSteps) {
-            size = Math.max(0, maxSize - radiusStepSize * (Game.entities.it - MUSIC_EVENTS.at(-1)))
-        } else {
-            size = maxSize 
-        }
-        Game.ctx.arc(
-            coor[0], // x
-            coor[1], // y
-            size * 0.5, // radius
-            0, // start angle
-            2 * Math.PI // end angle
-        )
-        Game.ctx.fill()
-        // restore to default composite operation (is draw over current image)
-        Game.ctx.globalCompositeOperation = "source-over"
+        // Draw masks
+        Game.components.filter(x => x.type == 'mask').forEach(comp => {
+            Game.ctx.globalCompositeOperation = 'destination-in'
+            Game.ctx.fillStyle = comp.color
+            Game.ctx.beginPath()
+            Game.ctx.arc(
+                comp.coor[0], // x
+                comp.coor[1], // y
+                comp.size * 0.5, // radius
+                0, // start angle
+                2 * Math.PI // end angle
+            )
+            Game.ctx.fill()
+            // restore to default composite operation (is draw over current image)
+            Game.ctx.globalCompositeOperation = 'source-over'
+        })
 
         // Foreground
         if (Game.entities.fg) {
@@ -607,7 +624,7 @@ const Game = {
 								
             }
         } else {
-            Game.entities.fg = 'rgba(255, 255, 255, 0.5)' 
+            Game.entities.fg = 'rgba(255, 255, 255, 1)'
             if (!comp) {
 								// Newly paused
 								if (musicComp) { 
@@ -616,6 +633,7 @@ const Game = {
                 Game.createComponent({
                     text: '\u25B6 ',
                     type: 'text',
+                    color: '#000',
                     size: 60,
                     id: PAUSE_TAG 
                 })
