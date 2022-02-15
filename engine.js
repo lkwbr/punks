@@ -326,11 +326,11 @@ const Game = {
     },
 
     creditSystem() {
+        // Opening credits
         const CREDIT_END_FRAME = MUSIC_EVENTS[3] - 2
         if (Game.entities.paused) { return }
         const INTRO_TEXT_TAG = 'intro_text' 
         let comp = Game.getComponent(INTRO_TEXT_TAG)
-
         if (!comp) {
             Game.createComponent({
                 text: 'WEBER\nPUNKS',
@@ -354,6 +354,22 @@ const Game = {
         if (Game.entities.it >= CREDIT_END_FRAME) {
             // Delete credits
             Game.deleteComponent(INTRO_TEXT_TAG)
+        }
+
+        // Ending credits
+        if (Game.entities.it >= MUSIC_EVENTS.at(-1) - 10) {
+            const OUTRO_TEXT_TAG = 'outro_text' 
+            let comp = Game.getComponent(OUTRO_TEXT_TAG)
+            if (!comp) {
+                Game.createComponent({
+                    text: 'https://opensea.io/collection/weber-punks',
+                    type: 'text',
+                    size: 120,
+                    coor: Game.getCenterCoordinates().concat([1]),  
+                    color: 'rgba(255, 255, 255, 255)', 
+                    id: OUTRO_TEXT_TAG
+                })
+            }
         }
     },
 
