@@ -14,7 +14,7 @@ const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const SPEED = 1
+const SPEED = 3
 
 const MUSIC_EVENTS = [
     0,  // start 
@@ -89,6 +89,7 @@ const Game = {
             Game.sunsetSystem,
             Game.mountainSystem,
             Game.starSystem,
+            Game.discoSystem,
             Game.creditSystem,
             Game.maskSystem,
             Game.pauseSystem,
@@ -235,6 +236,7 @@ const Game = {
             throw new Error(`Comoponent ID "${comp.id}" is not unique!`)
         }
         Game.components.push(comp)
+        return comp
     },
 
     deleteComponent(id) {
@@ -566,7 +568,7 @@ const Game = {
         }
         let comp = Game.getComponent(MASK_TAG)
         if (!comp) {
-            const coor = Game.getCenterCoordinates()
+            const coor = Game.getCenterCoordinates().concat([10])
             Game.createComponent({
                 type: 'mask',
                 coor,
@@ -587,15 +589,25 @@ const Game = {
 
         // TODO:  Remove items that should be deleted, because they're outside the canvas for too long, for example
         // TODO:  Probably give each component a lifespan  
+        //Game.ctx.filter = 'blur(10px) grayscale(1)'
 
         // Draw background
         Game.ctx.fillStyle = Game.entities.bg
         Game.ctx.fillRect(0, 0, Game.canvas.width, Game.canvas.height)
         console.log('...', Game.components)
         Game.components.sort((a, b) => a.coor[2] - b.coor[2]) // sort ascending by z-index
-        // Draw components
-        Game.components.filter(x => x.type != 'mask').forEach(comp => {
+
+        // Draw global filters
+        const globalFilters = Game.components.filter(x => x.type == 'filter').filter(x => x.filter !== 'none').map(comp => comp.filter).join(' ')
+        Game.ctx.filter = globalFilters
+
+        function drawComponent(comp) {
             comp.data.lifetime += 1 
+            Game.ctx.filter = globalFilters
+            if (comp.filter) {
+                // Apply a component's filters if they exists
+                Game.ctx.filter += comp.filter
+            }
             if (comp.type == 'img') {
                 let img = comp.img
                 if (!Game.entities.paused && comp.data.imgs) {
@@ -618,10 +630,9 @@ const Game = {
                     comp.dims[1]
                 )
             } else if (comp.type == 'text') {
-                const tsize = Game.scaleTextToCanvas(comp.size)
                 Game.ctx.fillStyle = comp.color || '#fff' 
                 Game.ctx.textAlign = 'center'
-                Game.ctx.font = `${tsize}px Arcade Classic`
+                Game.ctx.font = `${comp.size}px Arcade Classic`
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
             } else if (comp.type == 'audio') {
 								if (comp.playing) {
@@ -631,27 +642,28 @@ const Game = {
 								} else {
 										comp.audio.pause()
 								}
-						} else {
-                throw new Exception()
-            }
-        })        
-
-        // Draw masks
-        Game.components.filter(x => x.type == 'mask').forEach(comp => {
-            Game.ctx.globalCompositeOperation = 'destination-in'
-            Game.ctx.fillStyle = comp.color
-            Game.ctx.beginPath()
-            Game.ctx.arc(
-                comp.coor[0], // x
-                comp.coor[1], // y
-                comp.size * 0.5, // radius
-                0, // start angle
-                2 * Math.PI // end angle
-            )
+            } else if (comp.type == 'mask') {
+                // NOTE:  Just arc masks for now
+                Game.ctx.globalCompositeOperation = 'destination-in'
+                Game.ctx.fillStyle = comp.color
+                Game.ctx.beginPath()
+                Game.ctx.arc(
+                    comp.coor[0], // x
+                    comp.coor[1], // y
+                    comp.size * 0.5, // radius
+                    0, // start angle
+                    2 * Math.PI // end angle
+                )
             Game.ctx.fill()
             // restore to default composite operation (is draw over current image)
             Game.ctx.globalCompositeOperation = 'source-over'
-        })
+						} else {
+                throw new Exception()
+            }
+        }
+
+        // Draw components
+        Game.components.filter(x => !['filter'].includes(x.type)).map(drawComponent)
 
         // Foreground
         if (Game.entities.fg) {
@@ -660,17 +672,38 @@ const Game = {
         }
     },
 
+    discoSystem() {
+        const PAUSE_FILTER_TAG = 'dfilter'
+				let ftr = Game.getComponent(PAUSE_FILTER_TAG)
+        if (!ftr) {
+            ftr = Game.createComponent({
+                filter: 'none',
+                type: 'filter',
+                id: PAUSE_FILTER_TAG
+            })
+        }
+        // TODO
+        //ftr.filter = 'drop-shadow(16px 16px 20px red) invert(75%)'
+        //ftr.filter = `hue-rotate(${(Game.entities.it * 22.5) % 360}deg) contrast()`
+    },
+
     resizeSystem() {
+        /*
         if ((window.innerWidth == Game.canvas.width) 
             && (window.innerHeight == Game.canvas.height)) {
             return
         }
+        */
         // Adjust each entity for the new canvas size.
         const xShift = window.innerWidth / Game.canvas.width 
         const yShift = window.innerHeight / Game.canvas.height 
         Game.components.forEach(comp => {
             comp.coor[0] = comp.coor[0] * xShift
             comp.coor[1] = comp.coor[1] * yShift
+            if (comp.type == 'text') {
+                comp.data.originalSize = comp.data.originalSize || comp.size
+                comp.size = Game.scaleTextToCanvas(comp.data.originalSize)
+            }
         })
         // Update canvas
 				Game.canvas.width = window.innerWidth
@@ -681,10 +714,20 @@ const Game = {
     pauseSystem() {
         const PAUSE_TAG = 'pause'
 				const MUSIC_TAG = 'goodnight'
+				const PAUSE_FILTER_TAG = 'pfilter'
         const comp = Game.getComponent(PAUSE_TAG)
 				const musicComp = Game.getComponent(MUSIC_TAG)
+				let ftr = Game.getComponent(PAUSE_FILTER_TAG)
+        if (!ftr) {
+            ftr = Game.createComponent({
+                filter: 'grayscale(1)',
+                type: 'filter',
+                id: PAUSE_FILTER_TAG
+            })
+        }
         if (!Game.entities.paused) { 
             Game.entities.fg = null 
+            ftr.filter = 'none'
             if (comp) { 
 								// Newly unpaused
                 Game.deleteComponent(PAUSE_TAG)
@@ -697,20 +740,23 @@ const Game = {
 								} else {
 										musicComp.playing = true
 								}
-								
             }
         } else {
-            Game.entities.fg = 'rgba(255, 255, 255, 1)'
+            Game.entities.fg = 'rgba(255, 255, 255, 0.1)'
+            ftr.filter = 'grayscale(1)'
             if (!comp) {
 								// Newly paused
-								if (musicComp) { 
+								if (musicComp) {
 										musicComp.playing = false
 								}
+                const coor = Game.getCenterCoordinates().concat([101])
                 Game.createComponent({
                     text: '\u25B6 ',
                     type: 'text',
-                    color: '#000',
-                    size: 60,
+                    filter: 'drop-shadow(5px 5px 0px #ff0000)',
+                    color: '#fff',
+                    coor,
+                    size: 100,
                     id: PAUSE_TAG 
                 })
             }
