@@ -16,7 +16,13 @@ const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#
 
 const SPEED = 1
 
-const MUSIC_EVENTS = [0, 15, 30, 44, 350] // TODO
+const MUSIC_EVENTS = [
+    0,  // start 
+    15, // opera singing 
+    30, // ringo singing 
+    44, // ...  
+    350 // end
+]
 
 const USERS = [
     'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
@@ -26,7 +32,7 @@ const USERS = [
     //'sun'
     //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
 ]
-const ASSETS = USERS.concat(['mountains'])
+const ASSETS = USERS.concat(['mountains', 'star', 'tree'])
 
 function randomString(n) {
     n = n || 16
@@ -82,6 +88,7 @@ const Game = {
             Game.nightSystem,
             Game.sunsetSystem,
             Game.mountainSystem,
+            Game.starSystem,
             Game.creditSystem,
             Game.maskSystem,
             Game.pauseSystem,
@@ -213,6 +220,14 @@ const Game = {
             // Enforce component z-axis 
             comp.coor = comp.coor.concat([0])
         }
+        if (comp.img && comp.img.constructor.name == 'Array') {
+            // Auto-support animating many images
+            comp.data = {
+                imgs: comp.img,
+                it: 0
+            }
+            comp.img = comp.img[0]
+        }
         comp.killable = (comp.killable === false) ? false : true
         comp.data = comp.data || {}
         comp.data.lifetime = 0
@@ -225,6 +240,45 @@ const Game = {
     deleteComponent(id) {
         console.log('delete.id', id)
         Game.components = Game.components.filter(x => x.id !== id)
+    },
+
+    starSystem() {
+
+        if (Game.entities.it != MUSIC_EVENTS[2]) { return }
+
+        const sunDiameter = 10
+        const sunImages = Game.getImages('star', 2)
+        const groupId = 'star'
+        let stars = Game.getComponents(groupId)
+
+        // Spawn the snow
+				const numSnowParticles = 20 // Math.min(Math.floor(Math.log(Game.entities.it)), 5)
+				Array.from(Array(numSnowParticles)).forEach((x, i) => {
+						let rnd = Math.random()
+						let particleWidth = 5
+						if (rnd < 0.05) {
+							particleWidth = 20
+						} else if (rnd < 0.25) {
+							particleWidth = 10
+						}
+						const coor = [
+                Math.floor(Math.random() * Game.canvas.width),
+                Math.floor(Math.random() * Game.canvas.height * 0.25),
+            ]
+            const dims = [particleWidth, particleWidth]
+            Game.createComponent({
+                type: 'img',
+                id: `${groupId}_${randomString(6)}`,
+                img: sunImages[0],
+                coor,
+                dims,
+                group: groupId,
+                data: {
+                    imgs: sunImages,
+                    it: Math.floor(Math.random() * 2)
+                }
+            })
+				})
     },
 
     sunsetSystem() {
@@ -357,14 +411,14 @@ const Game = {
         }
 
         // Ending credits
-        if (Game.entities.it >= MUSIC_EVENTS.at(-1) - 10) {
+        if (Game.entities.it >= MUSIC_EVENTS.at(-1) - 50) {
             const OUTRO_TEXT_TAG = 'outro_text' 
             let comp = Game.getComponent(OUTRO_TEXT_TAG)
             if (!comp) {
                 Game.createComponent({
-                    text: 'https://opensea.io/collection/weber-punks',
+                    text: 'opensea.io/collection/weber-punks',
                     type: 'text',
-                    size: 120,
+                    size: 20,
                     coor: Game.getCenterCoordinates().concat([1]),  
                     color: 'rgba(255, 255, 255, 255)', 
                     id: OUTRO_TEXT_TAG
@@ -497,7 +551,7 @@ const Game = {
     maskSystem() {
         const MASK_TAG = 'fg-mask'
         const canvasDims = Game.getCanvasDims()
-        const maxSize = 2 * Math.sqrt(2) * canvasDims[0]/2
+        const maxSize = 2 * Math.sqrt(2) * Math.max(...canvasDims)/2
         let size
         const numRadiusSteps = 25
         const radiusStepSize = maxSize / numRadiusSteps 
@@ -522,6 +576,11 @@ const Game = {
         } else {
             comp.size = size 
         }
+    },
+
+    scaleTextToCanvas(size) {
+        // TODO
+        return size * (Game.getCanvasDims()[0] / 1098)
     },
 
     drawSystem() {
@@ -559,9 +618,10 @@ const Game = {
                     comp.dims[1]
                 )
             } else if (comp.type == 'text') {
+                const tsize = Game.scaleTextToCanvas(comp.size)
                 Game.ctx.fillStyle = comp.color || '#fff' 
                 Game.ctx.textAlign = 'center'
-                Game.ctx.font = `${comp.size}px Arcade Classic`
+                Game.ctx.font = `${tsize}px Arcade Classic`
                 Game.ctx.fillText(comp.text, comp.coor[0], comp.coor[1])
             } else if (comp.type == 'audio') {
 								if (comp.playing) {
