@@ -7,14 +7,14 @@ const IMG_HEIGHT = 15 * 10
 const USER_REFRESH_PERIOD = 15
 //const DEFAULT_RENDER_MS = 700
 const DEFAULT_RENDER_MS = 500
-const NUM_FRAMES = 2 
+const NUM_FRAMES = 2
 //const BG_COLORS = ['#BB2528', '#165B33']
 const BG_COLORS = ['#000', '#000']
 const PARTICLE_CEILING = 50
 const PARTICLE_FLOOR = 10
 const SUNSET_COLORS = ['#36c2ff', '#36c2ff', '#005dec', '#1105bd', '#570079', '#000454']
 
-const SPEED = 3
+const SPEED = 1
 
 const MUSIC_EVENTS = [
     0,  // start 
@@ -25,7 +25,16 @@ const MUSIC_EVENTS = [
 ]
 
 const USERS = [
-    'logan', 'ben', 'luke', 'josh', 'nick', 'rob', 'dee', 'blue',
+    'ben',
+    'logan', 
+    'dee', 
+    'rob', 
+    'josh', 
+    'nick', 
+    'luke', 
+    /*
+    'blue',
+    */
     //'emilia',
     //'landon',
 		//'tree'
@@ -254,7 +263,7 @@ const Game = {
         let stars = Game.getComponents(groupId)
 
         // Spawn the snow
-				const numSnowParticles = 20 // Math.min(Math.floor(Math.log(Game.entities.it)), 5)
+				const numSnowParticles = 10
 				Array.from(Array(numSnowParticles)).forEach((x, i) => {
 						let rnd = Math.random()
 						let particleWidth = 5
@@ -267,6 +276,8 @@ const Game = {
                 Math.floor(Math.random() * Game.canvas.width),
                 Math.floor(Math.random() * Game.canvas.height * 0.25),
             ]
+            // TODO
+            particleWidth = 20
             const dims = [particleWidth, particleWidth]
             Game.createComponent({
                 type: 'img',
@@ -466,12 +477,13 @@ const Game = {
         const username = USERS[Game.entities.userId]
         const USER_TEXT_TAG = 'user_text'
         const USER_TAG = 'user'
+        const USER_IMG_SCALE = 10
         let comp = Game.getComponent(USER_TAG)
         if (!comp) {
             console.log('creating user', username)
             const images = Game.getImages(username, 2)
             const img = images[0]
-            const dims = [img.width * 20, img.height * 20]
+            const dims = [img.width * USER_IMG_SCALE, img.height * USER_IMG_SCALE]
             const coor = Game.getCenterCoordinates()
             Game.createComponent({
                 img,
