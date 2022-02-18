@@ -25,21 +25,13 @@ const MUSIC_EVENTS = [
 ]
 
 const USERS = [
+    'josh', 
     'ben',
     'logan', 
     'dee', 
     'rob', 
-    'josh', 
     'nick', 
-    'luke', 
-    /*
-    'blue',
-    */
-    //'emilia',
-    //'landon',
-		//'tree'
-    //'sun'
-    //'janna', 'annie', 'lana', 'patrick', 'mikolas', 'burke', 'jordan'
+    'luke'
 ]
 const ASSETS = USERS.concat(['mountains', 'star', 'tree'])
 
@@ -745,7 +737,8 @@ const Game = {
                 Game.deleteComponent(PAUSE_TAG)
 								if (!musicComp) {
 										const musicComp = Game.createComponent({
-												audio: new Audio('goodnight.mp3'),
+												//audio: new Audio('res/goodnight.mp3'),
+												audio: new Audio('res/know_yourself.mp3'),
 												type: 'audio',
 												id: MUSIC_TAG 
 										})
